@@ -373,6 +373,126 @@ gcloud run deploy archcost-frontend \
 
 ---
 
+## DigitalOcean Droplet (Docker Compose)
+**⭐ Recommended for Full Control & Lower Cost**
+
+This section describes how to manually deploy to a DigitalOcean Droplet (Virtual Machine) using `docker-compose`. This gives you full control over the infrastructure and costs essentially the same as the underlying compute (~$6/month for a basic droplet to start).
+
+### Step 1: Create a Droplet
+1.  Log in to your DigitalOcean account.
+2.  Click **Create** -> **Droplets**.
+3.  **Choose Region**: Select a datacenter closest to your users (e.g., Bangalore, New York, London).
+4.  **Choose Image**: Select **Ubuntu 22.04 (LTS) x64** (or latest LTS).
+5.  **Choose Size**:
+    -   **Basic**: Regular Disk Type (SSD).
+    -   Select the **$6/month** (1GB RAM / 1 CPU) plan for testing/MVP.
+    -   *Recommendation*: 2GB RAM ($12/mo) is better for running frontend+backend+mongo+redis comfortably.
+6.  **Authentication Method**: Select **SSH Key** (recommended for security) or Password.
+    -   If SSH: Upload your public key (`id_rsa.pub`).
+7.  **Hostname**: Give it a name (e.g., `archcost-prod`).
+8.  Click **Create Droplet**.
+
+### Step 2: Configure Domain & DNS (Primary/Secondary Host)
+To make your app accessible via a domain (e.g., `archcost.com`), you need to configure the Nameservers (Primary and Secondary Hosts).
+
+1.  **At your Domain Registrar (e.g., GoDaddy, Namecheap, BigRock)**:
+    -   Find the "Nameservers" or "DNS Management" section.
+    -   Change the nameservers from "Default" to **Custom Nameservers**.
+    -   Enter DigitalOcean's nameservers:
+        -   **Primary Host (NS1)**: `ns1.digitalocean.com`
+        -   **Secondary Host (NS2)**: `ns2.digitalocean.com`
+        -   (Optional) NS3: `ns3.digitalocean.com`
+    -   Save. (Propagation can take up to 48 hours, but often happens in minutes).
+
+2.  **At DigitalOcean**:
+    -   Go to **Networking** -> **Domains**.
+    -   Enter your domain name (e.g., `archcost.com`) and project.
+    -   Click **Add Domain**.
+    -   **Add Records**:
+        -   **A Record**: Hostname `@` -> Select your Droplet (`archcost-prod`).
+        -   **A Record**: Hostname `www` -> Select your Droplet.
+        -   (This points `archcost.com` and `www.archcost.com` to your server's IP).
+
+### Step 3: Server Setup
+SSH into your droplet using its IP address (found on the dashboard).
+```bash
+ssh root@<your_droplet_ip>
+# Or if using password, just enter the password when prompted.
+```
+
+#### Install Docker & Docker Compose
+```bash
+# Update package list
+sudo apt update
+sudo apt upgrade -y
+
+# Install prerequisites
+sudo apt install -y apt-transport-https ca-certificates curl software-properties-common git
+
+# Add Docker’s official GPG key
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+# Add Docker repository
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Install Docker
+sudo apt update
+sudo apt install -y docker-ce docker-compose-plugin
+
+# Verify installation
+docker compose version
+```
+
+### Step 4: Deploy Code
+Clone your repository. Since your project uses submodules (backend/frontend), you need to ensure they are cloned too.
+
+```bash
+# Clone the repository
+git clone https://github.com/ankitbhatnagartech/archcost.git
+cd archcost
+
+# Initialize and update submodules (CRITICAL Step)
+git submodule update --init --recursive
+```
+
+### Step 5: Configure Environment
+Create the `.env` file for production configuration.
+
+```bash
+nano .env
+```
+
+Paste your configuration (adjust values as needed):
+```env
+# Backend defaults
+MONGO_URL=mongodb://mongodb:27017
+REDIS_URL=redis://redis:6379
+
+# Or if using External Managed DBs (Specific IP/URL)
+# MONGO_URL=mongodb+srv://user:pass@cluster.mongodb.net
+```
+Press `Ctrl+X`, then `Y`, then `Enter` to save.
+
+### Step 6: Start Application
+Use the production compose file we created.
+
+```bash
+# Pull and build the containers
+docker compose -f docker-compose.prod.yml up -d --build
+
+# Check status
+docker compose -f docker-compose.prod.yml ps
+```
+
+Your application should now be live at `http://<your_droplet_ip>` or `http://archcost.com`.
+
+### Step 7: Post-Install (Port 80 to Angular)
+The `docker-compose.prod.yml` maps the Frontend container to port 80.
+-   Ensure no other service (like standard Nginx/Apache) is blocking port 80 on the host.
+-   If `curl localhost` works but external access doesn't, check DigitalOcean Firewalls (Networking -> Firewalls) to ensure Inbound Traffic on TCP ports 80 (HTTP) and 443 (HTTPS) is allowed.
+
+---
+
 ## Post-Deployment Checklist
 
 ### ✅ Security

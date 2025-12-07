@@ -1,0 +1,39 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Deploy to DigitalOcean Droplet
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          script: |
+            # Navigate to directory
+            mkdir -p archcost
+            cd archcost
+            
+            # Pull latest changes
+            # Note: We assume the repo is already cloned. If not, you'd run git clone here first.
+            git pull origin main
+            
+            # Update submodules (Critical)
+            git submodule update --init --recursive
+
+            # Stop existing containers if needed (optional, upsert handles most cases)
+            # docker-compose -f docker-compose.prod.yml down
+
+            # Build and Start
+            docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
+            
+            # Prune unused images to save space
+            docker image prune -f

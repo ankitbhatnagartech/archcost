@@ -17,6 +17,8 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.KEY }}
+          password: ${{ secrets.PASSWORD }}
+          # Note: The action uses 'key' if provided, otherwise 'password'.
           script: |
             # Navigate to directory
             mkdir -p archcost

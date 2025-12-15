@@ -31,7 +31,7 @@ services:
       - MONGO_URL=${MONGO_URL:-mongodb://mongodb:27017}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - EMAIL_USER=archcostestimator@gmail.com
-      - EMAIL_PASSWORD=archcostestimator123
+      - EMAIL_PASSWORD=qthy dtbn zeoy lrot
     depends_on:
       mongodb:
         condition: service_healthy

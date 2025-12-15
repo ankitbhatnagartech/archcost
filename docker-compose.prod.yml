@@ -30,6 +30,8 @@ services:
     environment:
       - MONGO_URL=${MONGO_URL:-mongodb://mongodb:27017}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - EMAIL_USER=archcostestimator@gmail.com
+      - EMAIL_PASSWORD=archcostestimator123
     depends_on:
       mongodb:
         condition: service_healthy
